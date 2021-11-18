@@ -1,0 +1,10 @@
+default:
+  output_folder: ./output
+  parallel_tasks: 2
+  force_docker_rebuild: True
+
+  modules:
+    zircolite:
+      enabled: true
+    invalidmodule:
+      enabled: false
