@@ -24,7 +24,7 @@ class BaseExtractor(ABC):
         """List of artifact types processed by this extractor."""
 
     @abstractmethod
-    def run(self, artifact_file_path: Path):
+    def run(self, artifact_file_path: Path, output_folder: Path):
         """Parses a given file."""
 
 
@@ -40,16 +40,23 @@ class DockerExtractor(BaseExtractor, ABC):
         global _CACHED_BUILDS
 
         image = f"openfor_{self.name.lower()}"
-
         if self.name in _CACHED_BUILDS:
             logger.debug(f"Image for {self.name} already builded")
             return _CACHED_BUILDS[self.name]
         
-        if DOCKER_CLIENT.images.get(image) and not settings.force_docker_rebuild:
-            logger.debug(f"Image for {self.name} already found on the system")
-            _CACHED_BUILDS[self.name] = image
-            return image
 
+        try:
+            DOCKER_CLIENT.images.get(image)
+            logger.debug(f"Image for {self.name} already found on the system")
+            if not settings.force_docker_rebuild:
+                _CACHED_BUILDS[self.name] = image
+                return image
+        except Exception as err:
+            pass
+
+        print("======", image)
+
+        print("!!!!", image)
         logger.info(f"Building image for {self.name}")
         subclass_path = sys.modules[self.__module__].__file__ 
         actual_folder = Path(subclass_path).resolve().parent

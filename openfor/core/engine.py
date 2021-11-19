@@ -4,6 +4,7 @@ import time
 from loguru import logger
 from typing import List
 from pathlib import Path
+import time
 
 from openfor import settings
 
@@ -28,7 +29,7 @@ class AsyncProcessor:
             extractor = job['extractor']
             logger.info(f"Running extractor {extractor.name} against {job['file']}")
             try:
-                extractor().run(artifact_file_path=job['file'])
+                extractor().run(artifact_file_path=job['file'], output_folder=job['output_folder'])
             except Exception as err:
                 logger.critical(f"Error while executing {extractor.name}: {err}")
             q.task_done()
@@ -71,20 +72,43 @@ class   Engine:
                 raise exceptions.ExtractorNotFound(extractor)
             self._extractors.append(self._available_extractors[extractor])
 
-    def run(self, files: List[str]):
+    def run(self, files: List[str], output_folder: str):
         all_files = filesystem.gather_files(files)
         logger.info(f"Found {len(all_files)} files")
 
+        # Create root output folder
+        root_output_folder = Path(output_folder)
+        if root_output_folder.exists() and not root_output_folder.is_dir():
+            raise ValueError(f"Output folder {output_folder} is a file !")
+        root_output_folder.mkdir(exist_ok=True)
+
+        timed_output_folder = root_output_folder / str(time.time())
+        timed_output_folder.mkdir(exist_ok=True)
+
+        # Add tasks
         for f in all_files:
             t = artifacts.get_file_type(f)
+
             if t == artifacts.ArtifactType.UNKNOWN:
                 logger.info(f"Skip file {f}")
                 continue
 
+            intermediate_output_folder = timed_output_folder / f.stem.replace(" ", "_")
+            intermediate_output_folder.mkdir(exist_ok=True)
+
             for extractor in self.extractors:
                 if t == extractor.input_artifact_type:
-                    self._processor.add_job({"file": f, "extractor": extractor, "output_folder": })
+                    
+                    output_folder = intermediate_output_folder / extractor.name
+                    output_folder.mkdir(exist_ok=True)
 
+                    self._processor.add_job({
+                        "file": f,
+                        "extractor": extractor,
+                        "output_folder": output_folder
+                    })
+
+        # Run asyncio loop
         try:
             asyncio.run(self._processor.process())
         except KeyboardInterrupt:
