@@ -7,6 +7,7 @@ import docker
 import sys
 from openfor import settings
 from loguru import logger
+import subprocess
 
 class BaseExtractor(ABC):
     def __init__(self):
@@ -27,6 +28,21 @@ class BaseExtractor(ABC):
     def run(self, artifact_file_path: Path, output_folder: Path):
         """Parses a given file."""
 
+class SubprocessExtractor(BaseExtractor, ABC):
+
+    def run_subprocess(self, cmds, **kwargs):
+        logger.info(f"Running subprocess for {self.name} : {cmds}")
+        process: subprocess.CompletedProcess = subprocess.run(
+            cmds,
+            capture_output=True,
+            shell=True,
+            **kwargs
+        )
+        if process.returncode != 0:
+            batch: str = process.stderr.decode().strip()
+            logger.critical(f'Subprocess error for {self.name}: `{batch}`')
+        logger.debug(f'Successfully executed subprocess for {self.name}')
+        return process.stdout.decode()
 
 DOCKER_CLIENT = docker.from_env()
 _CACHED_BUILDS = {}
@@ -54,9 +70,6 @@ class DockerExtractor(BaseExtractor, ABC):
         except Exception as err:
             pass
 
-        print("======", image)
-
-        print("!!!!", image)
         logger.info(f"Building image for {self.name}")
         subclass_path = sys.modules[self.__module__].__file__ 
         actual_folder = Path(subclass_path).resolve().parent

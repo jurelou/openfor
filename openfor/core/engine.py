@@ -21,7 +21,6 @@ class AsyncProcessor:
     
     def add_job(self, job):
         self._jobs.append(job)
-        logger.debug(f"Added job {job}")
 
     async def worker(self, q):
         while True:
@@ -56,7 +55,7 @@ class   Engine:
             parent_class=BaseExtractor,
         )
         self._available_extractors = {e.name: e for e in available_extractors}
-        self._extractors = available_extractors
+        self._extractors = []
         self._processor = AsyncProcessor()
 
     @property
@@ -72,9 +71,39 @@ class   Engine:
                 raise exceptions.ExtractorNotFound(extractor)
             self._extractors.append(self._available_extractors[extractor])
 
+    def _add_file(self, f: str, output_folder: Path):
+        t = artifacts.get_file_type(f)
+
+        if t == artifacts.ArtifactType.UNKNOWN:
+            logger.info(f"Skip unknown artifact {f}")
+            return
+
+
+        """
+        if isinstance(t, artifacts.CompressedArtifactType):
+            filesystem.uncompress(f, intermediate_output_folder, t)
+        """
+        intermediate_output_folder = None
+        for extractor in self.extractors:
+            if t != extractor.input_artifact_type:
+                continue
+
+            if not intermediate_output_folder:
+                intermediate_output_folder = output_folder / f.stem.replace(" ", "_")
+                intermediate_output_folder.mkdir(exist_ok=True)
+
+
+            output_folder = intermediate_output_folder / extractor.name
+            output_folder.mkdir(exist_ok=True)
+
+            self._processor.add_job({
+                "file": f,
+                "extractor": extractor,
+                "output_folder": output_folder
+            })
+
+
     def run(self, files: List[str], output_folder: str):
-        all_files = filesystem.gather_files(files)
-        logger.info(f"Found {len(all_files)} files")
 
         # Create root output folder
         root_output_folder = Path(output_folder)
@@ -85,33 +114,17 @@ class   Engine:
         timed_output_folder = root_output_folder / str(time.time())
         timed_output_folder.mkdir(exist_ok=True)
 
+        all_files = filesystem.gather_files(files)
+        logger.info(f"Found {len(all_files)} files")
+
         # Add tasks
         for f in all_files:
-            t = artifacts.get_file_type(f)
-
-            if t == artifacts.ArtifactType.UNKNOWN:
-                logger.info(f"Skip file {f}")
-                continue
-
-            intermediate_output_folder = timed_output_folder / f.stem.replace(" ", "_")
-            intermediate_output_folder.mkdir(exist_ok=True)
-
-            for extractor in self.extractors:
-                if t == extractor.input_artifact_type:
-                    
-                    output_folder = intermediate_output_folder / extractor.name
-                    output_folder.mkdir(exist_ok=True)
-
-                    self._processor.add_job({
-                        "file": f,
-                        "extractor": extractor,
-                        "output_folder": output_folder
-                    })
+            self._add_file(f, timed_output_folder)
 
         # Run asyncio loop
         try:
             asyncio.run(self._processor.process())
         except KeyboardInterrupt:
             print("Caught ^C")
+
         logger.info("DONE")
-            

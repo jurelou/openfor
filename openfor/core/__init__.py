@@ -1,3 +1,3 @@
-from .artifacts import ArtifactType
+from .artifacts import ArtifactType, CompressedArtifactType
 
-__all__= ["ArtifactType"]
+__all__= ["ArtifactType", "CompressedArtifactType"]
