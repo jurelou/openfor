@@ -16,7 +16,7 @@ for file in $INPUT_FOLDER/*.7z; do
     echo Found 7z archive: $filename
     out_folder=$OUTPUT_FOLDER/${filename%.*}
     mkdir $out_folder
-    7z x $file -o$out_folder > /dev/null
+    7z x $file -o$out_folder
 
 
     for file2 in $out_folder/*.7z; do
@@ -24,7 +24,7 @@ for file in $INPUT_FOLDER/*.7z; do
         filename=$(basename -- "$file2")
         nested_out_folder=$out_folder/${filename%.*}
         mkdir -p nested_out_folder
-        7z x $file2 -o$nested_out_folder > /dev/null
+        7z x $file2 -o$nested_out_folder
     done
 done
 
