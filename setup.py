@@ -11,7 +11,7 @@ setup(
     author="Opulence",
     author_email="openforr",
     url="https://github.com/jurelou/openfor",
-    packages=find_namespace_packages(include=['openfor.*']),
+    packages=find_namespace_packages(include=['openfor', 'openfor.*']),
     entry_points={
         "console_scripts": [
             "openfor_cli=openfor.cli:cli"
