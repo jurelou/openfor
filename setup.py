@@ -24,7 +24,7 @@ setup(
         "docker==5.0.3",
         "loguru==0.5.3",
         "python-magic==0.4.24",
-        "py7zr==0.16.3"
+        "py7zr==0.16.3",
     ],
     extras_require={
         'dev': []

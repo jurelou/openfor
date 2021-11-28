@@ -49,3 +49,21 @@ You may need to extract files from ORC archives.
 ```
 ./unzip_orcs.sh <INPUT_FOLDER> <OUTPUT_FOLDER>
 ```
+
+
+# Configure a splunk forwarder
+
+For example, to connect to the receiving indexer with the hostname idx.mycompany.com and that host listens on port 9997 for forwarders, type in:
+
+sudo ./bin/splunk add forward-server localhost:9997 -auth ufadmin:rootroot
+
+sudo ./bin/splunk list forward-server
+
+Add to you etc/system/local/inputs.conf
+
+[monitor://C:\tmp\*]
+disabled=false
+index=myindex
+sourcetype=preprocess-winevet
+crcSalt = <SOURCE>
+

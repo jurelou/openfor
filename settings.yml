@@ -3,6 +3,13 @@ default:
   parallel_tasks: 2
   force_docker_rebuild: False
 
+  splunk:
+    host: chouchen-srv
+    port: 8089
+    scheme: https
+    username: admin
+    password: analyste
+
   modules:
     zircolite:
       enabled: true
